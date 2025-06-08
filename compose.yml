@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:latest
+    container_name: nextcloud-db-compose
+    restart: always
+    environment:
+      POSTGRES_USER: nextcloud
+      POSTGRES_PASSWORD: db_password_securise
+      POSTGRES_DB: nextcloud
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - app-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nextcloud -d nextcloud"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    image: nextcloud:latest
+    container_name: nextcloud-app-compose
+    restart: always
+    ports:
+      - "8080:80"
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_DB: nextcloud
+      POSTGRES_USER: nextcloud
+      POSTGRES_PASSWORD: db_password_securise
+      NEXTCLOUD_ADMIN_USER: admin
+      NEXTCLOUD_ADMIN_PASSWORD: admin
+    volumes:
+      - app-data:/var/www/html
+    networks:
+      - app-net
+    depends_on:
+      - db
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost/status.php || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - "8081:8080"
+    networks:
+      - app-net
+    depends_on:
+      - db
+
+volumes:
+  app-data:
+  db-data:
+
+networks:
+  app-net:
